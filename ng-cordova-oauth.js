@@ -142,7 +142,7 @@
                              $http({
                                     method: 'POST',
                                     url: tokenEndPoint,
-                                    data: 'grant_type=password&username='+username+'&password='+password+'&client_id='+clientId+'&scope=' + appScope.join(" ") + '&client_secret=notrequired",
+                                    data: 'grant_type=password&username='+username+'&password='+password+'&client_id='+clientId+'&scope=' + appScope.join(" ") + '&client_secret=notrequired',
                                     headers: {'Content-Type': 'application/x-www-form-urlencoded'}
                                 })
                                 .success(function(data) {
