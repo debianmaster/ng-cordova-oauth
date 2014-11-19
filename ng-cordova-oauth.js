@@ -106,10 +106,35 @@
              * @param    array appScope
              * @return   promise
              */
-            google: function(clientId, appScope) {
+            google: function(clientId, appScope,accessType) {
                 var deferred = $q.defer();
                 if(window.cordova) {
-                    var browserRef = window.open('https://accounts.google.com/o/oauth2/auth?client_id=' + clientId + '&redirect_uri=http://localhost/callback&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    var browserRef = window.open('https://accounts.google.com/o/oauth2/auth?client_id=' + clientId + '&redirect_uri=http://localhost/callback&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token'+(accessType ? '&access_type=offline' : 'access_type=online'), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                    browserRef.addEventListener("loadstart", function(event) {
+                        if((event.url).indexOf("http://localhost/callback") === 0) {
+                            var callbackResponse = (event.url).split("#")[1];
+                            var responseParameters = (callbackResponse).split("&");
+                            var parameterMap = [];
+                            for(var i = 0; i < responseParameters.length; i++) {
+                                parameterMap[responseParameters[i].split("=")[0]] = responseParameters[i].split("=")[1];
+                            }
+                            if(parameterMap.access_token !== undefined && parameterMap.access_token !== null) {
+                                deferred.resolve({ access_token: parameterMap.access_token, token_type: parameterMap.token_type, expires_in: parameterMap.expires_in });
+                            } else {
+                                deferred.reject("Problem authenticating");
+                            }
+                            browserRef.close();
+                        }
+                    });
+                } else {
+                    deferred.reject("Cannot authenticate via a web browser");
+                }
+                return deferred.promise;
+            },
+            oauth2: function(clientId, appScope,authEndPoint,accessType) {
+                var deferred = $q.defer();
+                if(window.cordova) {
+                    var browserRef = window.open(authEndPoint+'?client_id=' + clientId + '&redirect_uri=http://localhost/callback&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token'+(accessType ? '&access_type=offline' : 'access_type=online'), '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
                     browserRef.addEventListener("loadstart", function(event) {
                         if((event.url).indexOf("http://localhost/callback") === 0) {
                             var callbackResponse = (event.url).split("#")[1];
