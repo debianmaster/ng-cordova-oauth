@@ -131,27 +131,52 @@
                 }
                 return deferred.promise;
             },
-            oauth2: function(clientId, appScope,authEndPoint) {
+            
+            oauth2: function(clientId, appScope, authEndPoint, tokenEndPoint, username, password) {
                 var deferred = $q.defer();
                 //TODO implement code flow
                 if(window.cordova) {
-                    var browserRef = window.open(authEndPoint+'?client_id=' + clientId + '&redirect_uri=http://localhost/callback&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
-                    browserRef.addEventListener("loadstart", function(event) {
-                        if((event.url).indexOf("http://localhost/callback") === 0) {
-                            var callbackResponse = (event.url).split("#")[1];
-                            var responseParameters = (callbackResponse).split("&");
-                            var parameterMap = [];
-                            for(var i = 0; i < responseParameters.length; i++) {
-                                parameterMap[responseParameters[i].split("=")[0]] = responseParameters[i].split("=")[1];
-                            }
-                            if(parameterMap.access_token !== undefined && parameterMap.access_token !== null) {
-                                deferred.resolve({ access_token: parameterMap.access_token, token_type: parameterMap.token_type, expires_in: parameterMap.expires_in });
-                            } else {
-                                deferred.reject("Problem authenticating");
-                            }
-                            browserRef.close();
+                    if(typeof clientId !== 'undefined' && typeof appScope !== 'undefined' && typeof authEndPoint  !== 'undefined'){
+                        if(typeof tokenEndPoint !== 'undefined' && typeof username !== 'undefined' && typeof password  !== 'undefined') {
+                            //grant_type=password
+                             $http({
+                                    method: 'POST',
+                                    url: tokenEndPoint,
+                                    data: 'grant_type=password&username='+username+'&password='+password+'&client_id='+clientId+'&scope=' + appScope.join(" ") + '&client_secret=notrequired",
+                                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                                })
+                                .success(function(data) {
+                                    deferred.resolve(data);
+                                })
+                                .error(function(data, status) {
+                                    deferred.reject("Problem authenticating");
+                                });
+
+                        } else {
+                            //implicit flow response_type=token
+                            var  browserRef = window.open(authEndPoint+'?client_id=' + clientId + '&redirect_uri=http://localhost/callback&scope=' + appScope.join(" ") + '&approval_prompt=force&response_type=token', '_blank', 'location=no,clearsessioncache=yes,clearcache=yes');
+                            browserRef.addEventListener("loadstart", function(event) {
+                                if((event.url).indexOf("http://localhost/callback") === 0) {
+                                    var callbackResponse = (event.url).split("#")[1];
+                                    var responseParameters = (callbackResponse).split("&");
+                                    var parameterMap = [];
+                                    for(var i = 0; i < responseParameters.length; i++) {
+                                        parameterMap[responseParameters[i].split("=")[0]] = responseParameters[i].split("=")[1];
+                                    }
+                                    if(parameterMap.access_token !== undefined && parameterMap.access_token !== null) {
+                                        deferred.resolve(parameterMap);
+                                    } else {
+                                        deferred.reject("Problem authenticating");
+                                    }
+                                     browserRef.close();
                         }
                     });
+                        }
+                    } else {
+                        deferred.reject("no required params");
+                    }
+                    
+                   
                 } else {
                     deferred.reject("Cannot authenticate via a web browser");
                 }
